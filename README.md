@@ -53,7 +53,7 @@ Working example found in the SparkFun library (SparkFun_TMP117.cpp):
 ```C++
   //make sure the TMP will acknowledge over I2C
   Wire.beginTransmission(_deviceAddress);
-  if (Wire.endTransmission() != 0)
+  if (Wire.endTransmission() == 0)
   {
     // Other read or write operations here
   }
