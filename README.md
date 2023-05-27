@@ -33,6 +33,7 @@ Available implementations:
 > that is calibrated to ISO/IEC 17025 accredited standards. Only reprogram the general-purpose EEPROM[4:1]
 > locations if NIST traceability is not desired.
 
+The code can be adapted for other boards, but it will probably only recognize one slave address at a time, such as the ESP32 board, when researching I found references that the I2C hardware does not support this functionality.
 
 Communication operation:
 - The slave address must be previously selected before the other operations
