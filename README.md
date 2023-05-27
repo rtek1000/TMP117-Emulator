@@ -2,7 +2,7 @@
 For basic testing and implementation of [TMP117](https://www.ti.com/product/TMP117#description) sensor
 - Based on: [SparkFun_TMP117_Arduino_Library](https://github.com/sparkfun/SparkFun_TMP117_Arduino_Library)
 
-- See the [SparkFun totorial](https://learn.sparkfun.com/tutorials/qwiic-tmp117-high-precision-digital-temperature-sensor-hookup-guide/all)
+- See the [SparkFun tutorial](https://learn.sparkfun.com/tutorials/qwiic-tmp117-high-precision-digital-temperature-sensor-hookup-guide/all)
 
 [![image](https://cdn.sparkfun.com/assets/learn_tutorials/9/1/6/TMP117_High_Precision_Sensing_Temperature_from_Finger.jpg)](https://learn.sparkfun.com/tutorials/qwiic-tmp117-high-precision-digital-temperature-sensor-hookup-guide/all)
 
