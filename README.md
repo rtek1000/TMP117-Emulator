@@ -73,6 +73,8 @@ Note: SMBus Alert Function not implemented.
 > ALERT pin becomes inactive at the completion of the SMBus ALERT command. If the TMP117 loses the
 > arbitration, the TMP117 ALERT pin remains active.
 
+Some monitoring and debug outputs can be done in the Serial Monitor of the Arduino IDE. For testing, a UNO board was used as a TMP117 emulator, and a Nano board as a master, SparkFun's library has other useful examples as well.
+
 --------------
 
 #### About the TMP117:
