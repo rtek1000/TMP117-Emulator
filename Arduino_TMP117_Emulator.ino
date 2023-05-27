@@ -7,13 +7,42 @@
 // Ref. TMP117: https://github.com/sparkfun/SparkFun_TMP117_Arduino_Library
 
 #include <Wire.h>
+#include <EEPROM.h>
 
 #define sensors 4
 
 #define debug_cfg 0 // set 1 to enable
 
+// Use analog input (10 bits) to simulate temperature value
+// Temperature should vary +/- 4 degrees around 20 degrees
+// ((adc - 512) * TMP117_RESOLUTION) + 20.0; (This formula can be changed)
+#define use_ADC_for_temp 1    // set 1 to enable
+
+#if use_ADC_for_temp == 1
+#define in1 A0 // real Arduino pin (A4/A5 are used for I2C)
+#define in2 A1
+#define in3 A2
+#define in4 A3
+#endif
+
+#define use_LED_for_alarm 1    // set 1 to enable
+
+#if use_LED_for_alarm == 1
+#define LED 13 // real Arduino pin (A4/A5 are used for I2C)
+#endif
+
+// (Automatically populate with random data, if everything is 0xFF)
+#define use_real_EEPROM 1    // set 1 to enable
+
+// EEPROM has reduced number of writes, use with care
+#define fill_real_EEPROM 0   // set 1 to enable - random
+
+#define EEPROM_base_addr 0   // Arduino board real EEPROM // 48 bytes
+
 // base values:
 float analogTempC[sensors] = {25.7578125, 23.8203125, 28.34375, 27.0859375};
+
+#define TMP117_RESOLUTION 0.0078125f
 
 // EEPROM initial values:
 uint8_t EEPROM1_init[sensors][2] = {{0x25, 0x81}, {0x03, 0x34}, {0x93, 0x82}, {0x78, 0x12}};
@@ -39,8 +68,6 @@ uint16_t prev_TMP117_CONV_Data_Ready_speed[sensors] = {0};
 
 // AVG[1:0] = 00 (Datasheet page 28)
 const int16_t AVG_00_table[8] = {15, 125, 250, 500, 1000, 4000, 8000, 16000};
-
-#define TMP117_RESOLUTION 0.0078125f
 
 volatile uint8_t new_TMP117_CONF_buff[sensors][2] = {{0x02, 0x20}, {0x02, 0x20}, {0x02, 0x20}, {0x02, 0x20}};
 
@@ -113,6 +140,8 @@ volatile uint8_t get_TMP117_Register[sensors] = {0xFF, 0xFF, 0xFF, 0xFF};
 
 volatile bool TMP117_CONF_Data_Ready_clear[sensors] = {false, false, false, false};
 
+volatile bool TMP117_Alert_clear[sensors] = {false, false, false, false};
+
 volatile uint8_t CURR_DEV = 0;
 
 volatile int8_t rec_buff_index = -1;
@@ -128,6 +157,19 @@ unsigned long millis0[sensors] = {0};
 void print_interr_buff(bool debug);
 
 void setup() {
+#if use_ADC_for_temp == 1
+  pinMode(in1, INPUT);
+  pinMode(in2, INPUT);
+  pinMode(in3, INPUT);
+  pinMode(in4, INPUT);
+#endif
+
+#if use_LED_for_alarm == 1
+  pinMode(LED, OUTPUT);
+
+  digitalWrite(LED, LOW);
+#endif
+
   Serial.begin(115200);
 
   Serial.println("\r\n\r\nTMP117 Emulator start");
@@ -137,46 +179,78 @@ void setup() {
   Wire.onReceive(receiveEvent);
   Wire.onRequest(requestEvent);
 
-  // I2C Slave Promiscuous Mode (ATmega328 and others from this MCU family)
+  // I2C Slave Promiscuous Mode (ATmega328 and others from this MCU family, maybe Mega2560 board)
   // TWAMR: TWI (Slave) Address Mask Register
   // https://stackoverflow.com/questions/34691478/arduino-as-slave-with-multiple-i2c-addresses
-  TWAMR = (1 | 2) << 1; // 0x48, 0x49, 0x4A, 0x4B 
+  TWAMR = (1 | 2) << 1; // 0x48, 0x49, 0x4A, 0x4B
 
-  for (uint8_t device = 0; device < sensors; device++) {
-    TMP117_RegBank[device].EEPROM1.MSB = EEPROM1_init[device][0];
-    TMP117_RegBank[device].EEPROM1.LSB = EEPROM1_init[device][1];
-
-    TMP117_RegBank[device].EEPROM2.MSB = EEPROM2_init[device][0];
-    TMP117_RegBank[device].EEPROM2.LSB = EEPROM2_init[device][1];
-
-    TMP117_RegBank[device].EEPROM3.MSB = EEPROM3_init[device][0];
-    TMP117_RegBank[device].EEPROM3.LSB = EEPROM3_init[device][1];
-  }
-
-  for (uint8_t i = 0; i < sensors; i++) {
-    EEPROM_update(i);
-  }
+  data_EEPROM_init();
 }
 
 void loop(void) {
   print_interr_buff(uint8_t(debug_cfg)); // 1: debug
 
-  for (uint8_t dev = 0; dev < sensors; dev++) {
-    temperature_update(dev);
+  for (uint8_t sen = 0; sen < sensors; sen++) {
+    temperature_update(sen);
 
-    EEPROM_update(dev);
+    alarm_update(sen);
 
-    config_update(dev);
+    EEPROM_update(sen);
+
+    config_update(sen);
 
     // Conversion time update
-    conv_time_update(dev);
+    conv_time_update(sen);
 
     // Conv Ready update
-    if ((millis() - millis0[dev]) > TMP117_CONV_Data_Ready_speed[dev]) {
-      millis0[dev] = millis();
+    if ((millis() - millis0[sen]) > TMP117_CONV_Data_Ready_speed[sen]) {
+      millis0[sen] = millis();
 
-      setCONFbit(dev, TMP117_CONF_Data_Ready); // TMP117_CONF[dev] |= 1 << TMP117_CONF_Data_Ready;
+      setCONFbit(sen, TMP117_CONF_Data_Ready); // TMP117_CONF[sen] |= 1 << TMP117_CONF_Data_Ready;
     }
+  }
+}
+
+void data_EEPROM_init(void) {
+  if ((uint8_t(use_real_EEPROM) == 1) && (uint8_t(fill_real_EEPROM) == 1)) {
+    for (uint8_t device = 0; device < sensors; device++) {
+      fillEEPROM(device);
+    }
+  }
+
+  if (uint8_t(use_real_EEPROM) == 1) {
+    uint8_t tester = 0;
+    for (uint8_t i = EEPROM_base_addr; i < (48 + EEPROM_base_addr); i++) {
+      if (EEPROM.read(i) == 0xFF) {
+        tester++;
+      }
+    }
+
+    // All byte are 0xFF, fill random data
+    if (tester == 48) {
+      for (uint8_t device = 0; device < sensors; device++) {
+        fillEEPROM(device);
+      }
+    }
+  }
+
+  for (uint8_t device = 0; device < sensors; device++) {
+    if (uint8_t(use_real_EEPROM) == 1) {
+      initFromEEPROM(device);
+    } else {
+      TMP117_RegBank[device].EEPROM1.MSB = EEPROM1_init[device][0];
+      TMP117_RegBank[device].EEPROM1.LSB = EEPROM1_init[device][1];
+
+      TMP117_RegBank[device].EEPROM2.MSB = EEPROM2_init[device][0];
+      TMP117_RegBank[device].EEPROM2.LSB = EEPROM2_init[device][1];
+
+      TMP117_RegBank[device].EEPROM3.MSB = EEPROM3_init[device][0];
+      TMP117_RegBank[device].EEPROM3.LSB = EEPROM3_init[device][1];
+    }
+  }
+
+  for (uint8_t i = 0; i < sensors; i++) {
+    EEPROM_update(i);
   }
 }
 
@@ -202,152 +276,280 @@ void print_interr_buff(uint8_t debug) {
   }
 }
 
-void setCONFbit(uint8_t dev, uint16_t bit_pos) {
+void setCONFbit(uint8_t sen, uint16_t bit_pos) {
   if (bit_pos > 7) {
-    TMP117_RegBank[dev].CONFIGURATION.MSB |= (1 << (bit_pos - 8));
+    TMP117_RegBank[sen].CONFIGURATION.MSB |= (1 << (bit_pos - 8));
   } else {
-    TMP117_RegBank[dev].CONFIGURATION.LSB |= (1 << bit_pos);
+    TMP117_RegBank[sen].CONFIGURATION.LSB |= (1 << bit_pos);
   }
 }
 
-void resetCONFbit(uint8_t dev, uint16_t bit_pos) {
+void resetCONFbit(uint8_t sen, uint16_t bit_pos) {
   if (bit_pos > 7) {
-    TMP117_RegBank[dev].CONFIGURATION.MSB &= ~(1 << (bit_pos - 8));
+    TMP117_RegBank[sen].CONFIGURATION.MSB &= ~(1 << (bit_pos - 8));
   } else {
-    TMP117_RegBank[dev].CONFIGURATION.LSB &= ~(1 << bit_pos);
+    TMP117_RegBank[sen].CONFIGURATION.LSB &= ~(1 << bit_pos);
   }
 }
 
-void temperature_update(uint8_t dev) {
-  if (TMP117_CONF_Data_Ready_clear[dev] == true) {
-    TMP117_CONF_Data_Ready_clear[dev] = false;
+void temperature_update(uint8_t sen) {
+  uint16_t adc1 = 0;
+  uint16_t adc2 = 0;
+  uint16_t adc3 = 0;
+  uint16_t adc4 = 0;
 
-    resetCONFbit(dev, TMP117_CONF_Data_Ready); //TMP117_CONF[dev] &= ~(uint16_t)(1 << TMP117_CONF_Data_Ready);
+#if use_ADC_for_temp == 1
+  adc1 = analogRead(in1);
+  adc2 = analogRead(in2);
+  adc3 = analogRead(in3);
+  adc4 = analogRead(in4);
+#endif
 
-    if (auto_change_temperature[dev] == true) {
-      if (analogTempC[dev] < 25.0) {
-        analogTempC[dev] += TMP117_RESOLUTION;
+  if (TMP117_CONF_Data_Ready_clear[sen] == true) {
+    TMP117_CONF_Data_Ready_clear[sen] = false;
+
+    resetCONFbit(sen, TMP117_CONF_Data_Ready); //TMP117_CONF[sen] &= ~(uint16_t)(1 << TMP117_CONF_Data_Ready);
+
+    if (uint8_t(use_ADC_for_temp) == 1) {
+      analogTempC[sen] = ((adc1 - 512) * TMP117_RESOLUTION) + 20.0;
+    } else if (auto_change_temperature[sen] == true) {
+      if (analogTempC[sen] < 25.0) {
+        analogTempC[sen] += TMP117_RESOLUTION;
       } else {
-        analogTempC[dev] = 20.0;
+        analogTempC[sen] = 20.0;
       }
-    } else if (rand_auto_change_temperature[dev] == true) {
-      analogTempC[dev] = random(-1000, 1000) * TMP117_RESOLUTION + 25.0;
+    } else if (rand_auto_change_temperature[sen] == true) {
+      analogTempC[sen] = random(-1000, 1000) * TMP117_RESOLUTION + 25.0;
     }
   }
 
-  uint16_t digitalTempC = int16_t(float(analogTempC[dev] / TMP117_RESOLUTION));
+  uint16_t digitalTempC = int16_t(float(analogTempC[sen] / TMP117_RESOLUTION));
 
-  TMP117_RegBank[dev].TEMP_RESULT.MSB = (digitalTempC >> 8) & 0xFF;
-  TMP117_RegBank[dev].TEMP_RESULT.LSB = digitalTempC & 0xFF;
+  TMP117_RegBank[sen].TEMP_RESULT.MSB = (digitalTempC >> 8) & 0xFF;
+  TMP117_RegBank[sen].TEMP_RESULT.LSB = digitalTempC & 0xFF;
 }
 
-void EEPROM_update(uint8_t dev) {
-  if (((TMP117_RegBank[dev].EEPROM_UL.MSB >> 7) & 1) == 1) {
-    TMP117_RegBank[dev].EEPROM1.MSB = new_EEPROM1[dev].MSB;
-    TMP117_RegBank[dev].EEPROM1.LSB = new_EEPROM1[dev].LSB;
+void alarm_update(uint8_t sen) {
+  uint16_t t_H_alarm = 0;
+  uint16_t t_L_alarm = 0;
+  bool t_na_mod = 0;
+  bool pin_pol = 0;
+  bool dr_alert = 0;
+  uint16_t temp_res = 0;
+  bool H_alert = 0;
+  bool L_alert = 0;
+  bool dat_ready = 0;
 
-    TMP117_RegBank[dev].EEPROM2.MSB = new_EEPROM2[dev].MSB;
-    TMP117_RegBank[dev].EEPROM2.LSB = new_EEPROM2[dev].LSB;
+  t_H_alarm = uint16_t(TMP117_RegBank[sen].T_HIGH_LIMIT.MSB << 8);
+  t_H_alarm |= TMP117_RegBank[sen].T_HIGH_LIMIT.LSB;
 
-    TMP117_RegBank[dev].EEPROM3.MSB = new_EEPROM3[dev].MSB;
-    TMP117_RegBank[dev].EEPROM3.LSB = new_EEPROM3[dev].LSB;
+  t_L_alarm = uint16_t(TMP117_RegBank[sen].T_LOW_LIMIT.MSB << 8);
+  t_L_alarm |= TMP117_RegBank[sen].T_LOW_LIMIT.LSB;
 
-    if (TMP117_EEPROM_UL_enabled[dev] == false) {
-      TMP117_EEPROM_UL_enabled[dev] = true;
+  t_na_mod = (TMP117_RegBank[sen].CONFIGURATION.LSB >> 4) & 1;
+
+  pin_pol = (TMP117_RegBank[sen].CONFIGURATION.LSB >> 3) & 1;
+
+  dr_alert = (TMP117_RegBank[sen].CONFIGURATION.LSB >> 2) & 1;
+
+  dat_ready = (TMP117_RegBank[sen].CONFIGURATION.MSB >> 5) & 1;
+
+  H_alert = (TMP117_RegBank[sen].CONFIGURATION.MSB >> 7) & 1;
+
+  L_alert = (TMP117_RegBank[sen].CONFIGURATION.MSB >> 6) & 1;
+
+  temp_res = uint16_t(TMP117_RegBank[sen].TEMP_RESULT.MSB << 8);
+  temp_res |= TMP117_RegBank[sen].TEMP_RESULT.LSB;
+
+  // alert mode
+  if (t_na_mod == 0) {
+    if (TMP117_Alert_clear[sen] == true) {
+      TMP117_Alert_clear[sen] = false;
+
+      H_alert = 0;
+      L_alert = 0;
+    }
+
+    if (dat_ready == 1) {
+      if (temp_res > t_H_alarm) {
+        H_alert = 1;
+      }
+
+      if (temp_res < t_L_alarm) {
+        L_alert = 1;
+      }
+    }
+
+#if use_LED_for_alarm == 1
+    if ((H_alert == 1) || (L_alert == 1)) {
+      digitalWrite(LED, pin_pol);
+    }
+#endif
+  } else { // if (t_na_mod == 1) // Therm Mode
+    if (dat_ready == 1) {
+      if (temp_res > t_H_alarm) {
+        H_alert = 1;
+        L_alert = 0;
+      }
+
+      if (temp_res < t_L_alarm) {
+        H_alert = 0;
+        L_alert = 0;
+      }
+    }
+  }
+
+  TMP117_RegBank[sen].CONFIGURATION.MSB &= ~(H_alert << 7);
+  TMP117_RegBank[sen].CONFIGURATION.MSB |= H_alert << 7;
+
+  TMP117_RegBank[sen].CONFIGURATION.MSB &= ~(L_alert << 6);
+  TMP117_RegBank[sen].CONFIGURATION.MSB |= L_alert << 6;
+}
+
+void saveToEEPROM(uint8_t sen) {
+  uint16_t addr = (sen * 6) + EEPROM_base_addr; // 0-3 // 48 bytes
+
+  EEPROM.update(addr, new_EEPROM1[sen].MSB);
+  EEPROM.update(addr + 1, new_EEPROM1[sen].LSB);
+  EEPROM.update(addr + 2, new_EEPROM2[sen].MSB);
+  EEPROM.update(addr + 3, new_EEPROM2[sen].LSB);
+  EEPROM.update(addr + 4, new_EEPROM3[sen].MSB);
+  EEPROM.update(addr + 5, new_EEPROM3[sen].LSB);
+}
+
+void initFromEEPROM(uint8_t sen) {
+  uint16_t addr = (sen * 6) + EEPROM_base_addr; // 0-3 // 48 bytes
+
+  TMP117_RegBank[sen].EEPROM1.MSB = EEPROM.read(addr);
+  TMP117_RegBank[sen].EEPROM1.LSB = EEPROM.read(addr + 1);
+  TMP117_RegBank[sen].EEPROM2.MSB = EEPROM.read(addr + 2);
+  TMP117_RegBank[sen].EEPROM2.LSB = EEPROM.read(addr + 3);
+  TMP117_RegBank[sen].EEPROM3.MSB = EEPROM.read(addr + 4);
+  TMP117_RegBank[sen].EEPROM3.LSB = EEPROM.read(addr + 5);
+}
+
+void fillEEPROM(uint8_t sen) {
+  uint16_t addr = (sen * 6) + EEPROM_base_addr; // 0-3 // 48 bytes
+
+  EEPROM.update(addr, random(0, 255));
+  EEPROM.update(addr + 1, random(0, 255));
+  EEPROM.update(addr + 2, random(0, 255));
+  EEPROM.update(addr + 3, random(0, 255));
+  EEPROM.update(addr + 4, random(0, 255));
+  EEPROM.update(addr + 5, random(0, 255));
+}
+
+void EEPROM_update(uint8_t sen) {
+  if (((TMP117_RegBank[sen].EEPROM_UL.MSB >> 7) & 1) == 1) {
+    TMP117_RegBank[sen].EEPROM1.MSB = new_EEPROM1[sen].MSB;
+    TMP117_RegBank[sen].EEPROM1.LSB = new_EEPROM1[sen].LSB;
+
+    TMP117_RegBank[sen].EEPROM2.MSB = new_EEPROM2[sen].MSB;
+    TMP117_RegBank[sen].EEPROM2.LSB = new_EEPROM2[sen].LSB;
+
+    TMP117_RegBank[sen].EEPROM3.MSB = new_EEPROM3[sen].MSB;
+    TMP117_RegBank[sen].EEPROM3.LSB = new_EEPROM3[sen].LSB;
+
+    if (uint8_t(use_real_EEPROM) == 1) {
+      saveToEEPROM(sen);
+    }
+
+    if (TMP117_EEPROM_UL_enabled[sen] == false) {
+      TMP117_EEPROM_UL_enabled[sen] = true;
 
       Serial.print("Sensor ");
-      Serial.print(dev, DEC);
+      Serial.print(sen, DEC);
       Serial.println(" EEPROM Unlock");
     }
   } else { // restore values
-    new_EEPROM1[dev].MSB = TMP117_RegBank[dev].EEPROM1.MSB; // TMP117_EEPROM1_MSB[dev];
-    new_EEPROM1[dev].LSB = TMP117_RegBank[dev].EEPROM1.LSB; // TMP117_EEPROM1_LSB[dev];
+    new_EEPROM1[sen].MSB = TMP117_RegBank[sen].EEPROM1.MSB; // TMP117_EEPROM1_MSB[sen];
+    new_EEPROM1[sen].LSB = TMP117_RegBank[sen].EEPROM1.LSB; // TMP117_EEPROM1_LSB[sen];
 
-    new_EEPROM2[dev].MSB = TMP117_RegBank[dev].EEPROM2.MSB; // TMP117_EEPROM2_MSB[dev];
-    new_EEPROM2[dev].LSB = TMP117_RegBank[dev].EEPROM2.LSB; // TMP117_EEPROM2_LSB[dev];
+    new_EEPROM2[sen].MSB = TMP117_RegBank[sen].EEPROM2.MSB; // TMP117_EEPROM2_MSB[sen];
+    new_EEPROM2[sen].LSB = TMP117_RegBank[sen].EEPROM2.LSB; // TMP117_EEPROM2_LSB[sen];
 
-    new_EEPROM3[dev].MSB = TMP117_RegBank[dev].EEPROM3.MSB; // TMP117_EEPROM3_MSB[dev];
-    new_EEPROM3[dev].LSB = TMP117_RegBank[dev].EEPROM3.LSB; // TMP117_EEPROM3_LSB[dev];
+    new_EEPROM3[sen].MSB = TMP117_RegBank[sen].EEPROM3.MSB; // TMP117_EEPROM3_MSB[sen];
+    new_EEPROM3[sen].LSB = TMP117_RegBank[sen].EEPROM3.LSB; // TMP117_EEPROM3_LSB[sen];
 
-    if (TMP117_EEPROM_UL_enabled[dev] == true) {
-      TMP117_EEPROM_UL_enabled[dev] = false;
+    if (TMP117_EEPROM_UL_enabled[sen] == true) {
+      TMP117_EEPROM_UL_enabled[sen] = false;
 
       Serial.print("Sensor ");
-      Serial.print(dev, DEC);
+      Serial.print(sen, DEC);
       Serial.println(" EEPROM Lock");
     }
   }
 }
 
-void config_update(uint8_t dev) {
+void config_update(uint8_t sen) {
   uint8_t TMP117_CONF_tmp0_MSB = 0;
   uint8_t TMP117_CONF_tmp0_LSB = 0;
 
   uint8_t TMP117_CONF_tmp1_MSB = 0;
   uint8_t TMP117_CONF_tmp1_LSB = 0;
 
-  TMP117_CONF_tmp0_MSB = TMP117_RegBank[dev].CONFIGURATION.MSB & TMP117_CONF_write_mask_MSB;
-  TMP117_CONF_tmp0_LSB = TMP117_RegBank[dev].CONFIGURATION.LSB & TMP117_CONF_write_mask_LSB;
+  TMP117_CONF_tmp0_MSB = TMP117_RegBank[sen].CONFIGURATION.MSB & TMP117_CONF_write_mask_MSB;
+  TMP117_CONF_tmp0_LSB = TMP117_RegBank[sen].CONFIGURATION.LSB & TMP117_CONF_write_mask_LSB;
 
-  TMP117_CONF_tmp1_MSB = new_TMP117_CONF_buff[dev][1] & TMP117_CONF_write_mask_MSB;
-  TMP117_CONF_tmp1_LSB = new_TMP117_CONF_buff[dev][0] & TMP117_CONF_write_mask_LSB;
+  TMP117_CONF_tmp1_MSB = new_TMP117_CONF_buff[sen][1] & TMP117_CONF_write_mask_MSB;
+  TMP117_CONF_tmp1_LSB = new_TMP117_CONF_buff[sen][0] & TMP117_CONF_write_mask_LSB;
 
   if ((TMP117_CONF_tmp0_MSB != TMP117_CONF_tmp1_MSB) ||
       (TMP117_CONF_tmp0_LSB != TMP117_CONF_tmp1_LSB)) {
 
-    TMP117_RegBank[dev].CONFIGURATION.MSB &= ~(TMP117_CONF_write_mask_MSB);
-    TMP117_RegBank[dev].CONFIGURATION.MSB |= TMP117_CONF_tmp1_MSB;
+    TMP117_RegBank[sen].CONFIGURATION.MSB &= ~(TMP117_CONF_write_mask_MSB);
+    TMP117_RegBank[sen].CONFIGURATION.MSB |= TMP117_CONF_tmp1_MSB;
 
-    TMP117_RegBank[dev].CONFIGURATION.LSB &= ~(TMP117_CONF_write_mask_LSB);
-    TMP117_RegBank[dev].CONFIGURATION.LSB |= TMP117_CONF_tmp1_LSB;
+    TMP117_RegBank[sen].CONFIGURATION.LSB &= ~(TMP117_CONF_write_mask_LSB);
+    TMP117_RegBank[sen].CONFIGURATION.LSB |= TMP117_CONF_tmp1_LSB;
 
     Serial.print("Sensor ");
-    Serial.print(dev, DEC);
+    Serial.print(sen, DEC);
     Serial.print(" new config: ");
-    Serial.print(TMP117_RegBank[dev].CONFIGURATION.MSB, BIN);
+    Serial.print(TMP117_RegBank[sen].CONFIGURATION.MSB, BIN);
     Serial.print("b (MSB) ");
-    Serial.print(TMP117_RegBank[dev].CONFIGURATION.LSB, BIN);
+    Serial.print(TMP117_RegBank[sen].CONFIGURATION.LSB, BIN);
     Serial.println("b (LSB) ");
 
-    new_TMP117_CONF_buff[dev][1] = TMP117_RegBank[dev].CONFIGURATION.MSB;
-    new_TMP117_CONF_buff[dev][0] = TMP117_RegBank[dev].CONFIGURATION.LSB;
+    new_TMP117_CONF_buff[sen][1] = TMP117_RegBank[sen].CONFIGURATION.MSB;
+    new_TMP117_CONF_buff[sen][0] = TMP117_RegBank[sen].CONFIGURATION.LSB;
   }
 
-  TMP117_RegBank[dev].CONFIGURATION.MSB = TMP117_RegBank[dev].CONFIGURATION.MSB;
-  TMP117_RegBank[dev].CONFIGURATION.LSB = TMP117_RegBank[dev].CONFIGURATION.LSB;
+  TMP117_RegBank[sen].CONFIGURATION.MSB = TMP117_RegBank[sen].CONFIGURATION.MSB;
+  TMP117_RegBank[sen].CONFIGURATION.LSB = TMP117_RegBank[sen].CONFIGURATION.LSB;
 }
 
-void conv_time_update(uint8_t dev) {
+void conv_time_update(uint8_t sen) {
   uint16_t TMP117_CONF_tmp;
   uint8_t TMP117_CONF_AVG;
   uint8_t TMP117_CONF_CONV;
 
-  TMP117_CONF_tmp = TMP117_RegBank[dev].CONFIGURATION.MSB << 8;
-  TMP117_CONF_tmp |= TMP117_RegBank[dev].CONFIGURATION.LSB;
+  TMP117_CONF_tmp = TMP117_RegBank[sen].CONFIGURATION.MSB << 8;
+  TMP117_CONF_tmp |= TMP117_RegBank[sen].CONFIGURATION.LSB;
 
   TMP117_CONF_AVG = (TMP117_CONF_tmp >> TMP117_CONF_AVG0) & 0x03;   // 2 bits
 
   TMP117_CONF_CONV = (TMP117_CONF_tmp >> TMP117_CONF_CONV0) & 0x07; // 3 bits
 
   // Conv time update
-  if (fixed_CONV_Data_Ready_speed[dev] == true) {
-    TMP117_CONV_Data_Ready_speed[dev] = fixed_TMP117_CONV_Data_Ready_speed[dev];
+  if (fixed_CONV_Data_Ready_speed[sen] == true) {
+    TMP117_CONV_Data_Ready_speed[sen] = fixed_TMP117_CONV_Data_Ready_speed[sen];
   } else {
     uint16_t calc_time = 0;
 
     calc_time = AVG_00_table[TMP117_CONF_CONV];
 
-    TMP117_CONV_Data_Ready_speed[dev] = calc_time;
+    TMP117_CONV_Data_Ready_speed[sen] = calc_time;
   }
 
   // Print new conv time
-  if (prev_TMP117_CONV_Data_Ready_speed[dev] != TMP117_CONV_Data_Ready_speed[dev]) {
-    prev_TMP117_CONV_Data_Ready_speed[dev] = TMP117_CONV_Data_Ready_speed[dev];
+  if (prev_TMP117_CONV_Data_Ready_speed[sen] != TMP117_CONV_Data_Ready_speed[sen]) {
+    prev_TMP117_CONV_Data_Ready_speed[sen] = TMP117_CONV_Data_Ready_speed[sen];
 
     Serial.print("Sensor ");
-    Serial.print(dev, DEC);
+    Serial.print(sen, DEC);
     Serial.print(": Conv time = ");
-    Serial.print(TMP117_CONV_Data_Ready_speed[dev], DEC);
+    Serial.print(TMP117_CONV_Data_Ready_speed[sen], DEC);
     Serial.print("ms | AVG = ");
     Serial.print(TMP117_CONF_AVG, BIN);
     Serial.print("b | CONV = ");
@@ -366,6 +568,7 @@ void requestEvent(void) {
       break;
     case TMP117_CONFIGURATION:
       TMP117_CONF_Data_Ready_clear[CURR_DEV] = true;
+      TMP117_Alert_clear[CURR_DEV] = true;
 
       bufferSend[0] = TMP117_RegBank[CURR_DEV].CONFIGURATION.MSB;
       bufferSend[1] = TMP117_RegBank[CURR_DEV].CONFIGURATION.LSB;
