@@ -293,16 +293,13 @@ void resetCONFbit(uint8_t sen, uint16_t bit_pos) {
 }
 
 void temperature_update(uint8_t sen) {
-  uint16_t adc1 = 0;
-  uint16_t adc2 = 0;
-  uint16_t adc3 = 0;
-  uint16_t adc4 = 0;
+  uint16_t adc[sensors] = {0, 0, 0, 0};
 
 #if use_ADC_for_temp == 1
-  adc1 = analogRead(in1);
-  adc2 = analogRead(in2);
-  adc3 = analogRead(in3);
-  adc4 = analogRead(in4);
+  adc[0] = analogRead(in1);
+  adc[1] = analogRead(in2);
+  adc[2] = analogRead(in3);
+  adc[3] = analogRead(in4);
 #endif
 
   if (TMP117_CONF_Data_Ready_clear[sen] == true) {
@@ -311,7 +308,7 @@ void temperature_update(uint8_t sen) {
     resetCONFbit(sen, TMP117_CONF_Data_Ready); //TMP117_CONF[sen] &= ~(uint16_t)(1 << TMP117_CONF_Data_Ready);
 
     if (uint8_t(use_ADC_for_temp) == 1) {
-      analogTempC[sen] = ((adc1 - 512) * TMP117_RESOLUTION) + 20.0;
+      analogTempC[sen] = ((adc[sen] - 512) * TMP117_RESOLUTION) + 20.0;
     } else if (auto_change_temperature[sen] == true) {
       if (analogTempC[sen] < 25.0) {
         analogTempC[sen] += TMP117_RESOLUTION;
