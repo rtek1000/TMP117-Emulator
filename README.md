@@ -8,23 +8,6 @@ For basic testing and implementation of [TMP117](https://www.ti.com/product/TMP1
 
 --------------
 
-#### About the TMP117:
-> The TMP117 is a high-precision digital temperature sensor. It is designed to meet ASTM E1112 and ISO 80601 requirements for electronic patient thermometers. The TMP117 provides a 16-bit temperature result with a resolution of 0.0078 °C and an accuracy of up to ±0.1 °C across the temperature range of –20 °C to 50 °C with no calibration. The TMP117 has in interface that is I2C- and SMBus™-compatible, programmable alert functionality, and the device can support up to four devices on a single bus. Integrated EEPROM is included for device programming with an additional 48-bits memory available for general use.
-> 
-> The low power consumption of the TMP117 minimizes the impact of self-heating on measurement accuracy. The TMP117 operates from 1.7 V to 5.5 V and typically consumes 3.5 µA.
-> 
-> For non-medical applications, the TMP117 can serve as a single chip digital alternative to a Platinum RTD. The TMP117 has an accuracy comparable to a Class AA RTD, while only using a fraction of the power of the power typically needed for a PT100 RTD. The TMP117 simplifies the design effort by removing many of the complexities of RTDs such as precision references, matched traces, complicated algorithms, and calibration.
-> 
-> The TMP117 units are 100% tested on a production setup that is NIST traceable and verified with equipment that is calibrated to ISO/IEC 17025 accredited standards.
-
-> For cases when system calibration is not planned,
-> TI recommends not soldering the thermal pad to the PCB. Due to the small thermal mass of the device,
-> not soldering the thermal pad will have a minimal impact on the described characteristics. Manual device
-> soldering to the PCB creates additional mechanical stress on the package, therefore to prevent precision
-> degradation **_a standard PCB reflow oven process is highly recommended_**. (DS pg. 36)
-
---------------
-
 #### The code
 This code is specific for boards with ATmega328 such as UNO, Nano, Pro Mini.
 - The ATmega328 has a very useful function for this emulator that allows ignoring some bits of the I2C address in slave mode. So the I2C module accepts commands from different slave addresses.
@@ -89,3 +72,19 @@ Note: SMBus Alert Function not implemented.
 > ALERT pin becomes inactive at the completion of the SMBus ALERT command. If the TMP117 loses the
 > arbitration, the TMP117 ALERT pin remains active.
 
+--------------
+
+#### About the TMP117:
+> The TMP117 is a high-precision digital temperature sensor. It is designed to meet ASTM E1112 and ISO 80601 requirements for electronic patient thermometers. The TMP117 provides a 16-bit temperature result with a resolution of 0.0078 °C and an accuracy of up to ±0.1 °C across the temperature range of –20 °C to 50 °C with no calibration. The TMP117 has in interface that is I2C- and SMBus™-compatible, programmable alert functionality, and the device can support up to four devices on a single bus. Integrated EEPROM is included for device programming with an additional 48-bits memory available for general use.
+> 
+> The low power consumption of the TMP117 minimizes the impact of self-heating on measurement accuracy. The TMP117 operates from 1.7 V to 5.5 V and typically consumes 3.5 µA.
+> 
+> For non-medical applications, the TMP117 can serve as a single chip digital alternative to a Platinum RTD. The TMP117 has an accuracy comparable to a Class AA RTD, while only using a fraction of the power of the power typically needed for a PT100 RTD. The TMP117 simplifies the design effort by removing many of the complexities of RTDs such as precision references, matched traces, complicated algorithms, and calibration.
+> 
+> The TMP117 units are 100% tested on a production setup that is NIST traceable and verified with equipment that is calibrated to ISO/IEC 17025 accredited standards.
+
+> For cases when system calibration is not planned,
+> TI recommends not soldering the thermal pad to the PCB. Due to the small thermal mass of the device,
+> not soldering the thermal pad will have a minimal impact on the described characteristics. Manual device
+> soldering to the PCB creates additional mechanical stress on the package, therefore to prevent precision
+> degradation **_a standard PCB reflow oven process is highly recommended_**. (DS pg. 36)
