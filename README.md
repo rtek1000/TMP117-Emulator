@@ -76,6 +76,13 @@ Note: SMBus Alert Function not implemented.
 Some monitoring and debug outputs can be done in the Serial Monitor of the Arduino IDE. For testing, a UNO board was used as a TMP117 emulator, and a Nano board as a master, SparkFun's library has other useful examples as well.
 
 --------------
+#### Hardware:
+
+See this tutorial: [How to Setup I2C Communication on the Arduino](https://www.circuitbasics.com/how-to-set-up-i2c-communication-for-arduino/)
+
+[![img](https://www.circuitbasics.com/wp-content/uploads/2020/04/Arduino-I2C-Tutorial-connection-3-1024x614.png)](https://www.circuitbasics.com/how-to-set-up-i2c-communication-for-arduino/)
+
+--------------
 
 #### About the TMP117:
 > The TMP117 is a high-precision digital temperature sensor. It is designed to meet ASTM E1112 and ISO 80601 requirements for electronic patient thermometers. The TMP117 provides a 16-bit temperature result with a resolution of 0.0078 °C and an accuracy of up to ±0.1 °C across the temperature range of –20 °C to 50 °C with no calibration. The TMP117 has in interface that is I2C- and SMBus™-compatible, programmable alert functionality, and the device can support up to four devices on a single bus. Integrated EEPROM is included for device programming with an additional 48-bits memory available for general use.
