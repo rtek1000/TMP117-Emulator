@@ -80,7 +80,9 @@ Note: Some functions were not implemented, such as these ones:
 > acknowledges the general-call address and responds to commands in the second byte. If the second byte
 > is 0000 0110, the TMP117 internal registers are reset to power-up values.
 
-Some monitoring and debug outputs can be done in the Serial Monitor of the Arduino IDE. SparkFun's library has other useful examples as well.
+Some monitoring and debug outputs can be done in the Serial Monitor of the Arduino IDE.
+
+SparkFun's library has other useful examples as well. The example added here has been modified to demonstrate some additional functions of the TMP117, like for example reading UID.
 
 --------------
 #### Hardware:
