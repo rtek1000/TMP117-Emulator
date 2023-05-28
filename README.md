@@ -103,8 +103,8 @@ See this tutorial: [How to Setup I2C Communication on the Arduino](https://www.c
 > For cases when system calibration is not planned,
 > TI recommends not soldering the thermal pad to the PCB. Due to the small thermal mass of the device,
 > not soldering the thermal pad will have a minimal impact on the described characteristics. Manual device
-> soldering to the PCB creates additional mechanical stress on the package, therefore to prevent precision
-> degradation a standard PCB reflow oven process is **_highly recommended_**. (DS pg. 36)
+> soldering to the PCB creates additional mechanical stress on the package, therefore **_to prevent precision
+> degradation_** a standard PCB reflow oven process is **_highly recommended_**. (DS pg. 36)
 
 --------------
 
