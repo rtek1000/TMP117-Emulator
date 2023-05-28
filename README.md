@@ -89,7 +89,7 @@ See this tutorial: [How to Setup I2C Communication on the Arduino](https://www.c
 
 [![img](https://www.circuitbasics.com/wp-content/uploads/2020/04/Arduino-I2C-Tutorial-connection-3-1024x614.png)](https://www.circuitbasics.com/how-to-set-up-i2c-communication-for-arduino/)
 
-For testing, a UNO board was used as a TMP117 emulator, and a Nano board as a master, a 4k7 pull-up resistor on SDA and a 4k7 resistor on SCL.
+For testing, a UNO board was used as a TMP117 emulator (I2C slave), and a Nano board as a I2C master. Using a 4k7 pull-up resistor on SDA and a 4k7 resistor on SCL.
 
 --------------
 
