@@ -9,7 +9,7 @@ For basic testing and implementation of [TMP117](https://www.ti.com/product/TMP1
 --------------
 
 #### The code
-This code is specific for boards with ATmega328 such as UNO, Nano, Pro Mini.
+This [code](https://github.com/rtek1000/TMP117-Emulator/blob/main/Arduino_TMP117_Emulator.ino) is specific for boards with ATmega328 such as UNO, Nano, Pro Mini.
 - The ATmega328 has a very useful function for this emulator that allows ignoring some bits of the I2C address in slave mode. So the I2C module accepts commands from different slave addresses.
 
 > The TWAMR can be loaded with a 7-bit slave address mask. Each of the bits in TWAMR can mask
@@ -82,7 +82,7 @@ Note: Some functions were not implemented, such as these ones:
 
 Some monitoring and debug outputs can be done in the Serial Monitor of the Arduino IDE.
 
-SparkFun's library has other useful examples as well. The example added here has been modified to demonstrate some additional functions of the TMP117, like for example reading UID.
+SparkFun's library has other useful examples as well. The [example](https://github.com/rtek1000/TMP117-Emulator/blob/main/Example7b_AdvancedI2CFunctions_modified.ino) added here has been modified to demonstrate some additional functions of the TMP117, like for example reading UID.
 
 --------------
 #### Hardware:
