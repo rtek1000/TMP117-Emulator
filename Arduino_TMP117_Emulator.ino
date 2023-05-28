@@ -165,9 +165,9 @@ void setup() {
 #endif
 
 #if use_LED_for_alarm == 1
-  pinMode(LED, OUTPUT);
+  pinMode(LED, INPUT); // "Open Drain" needs pull-up resistor
 
-  digitalWrite(LED, LOW);
+  digitalWrite(LED, HIGH);
 #endif
 
   Serial.begin(115200);
@@ -379,7 +379,14 @@ void alarm_update(uint8_t sen) {
 
 #if use_LED_for_alarm == 1
     if ((H_alert == 1) || (L_alert == 1)) {
+      if (pin_pol == 1) {
+        pinMode(LED, INPUT); // "Open Drain" needs pull-up resistor
+      } else {
+        pinMode(LED, OUTPUT);
+      }
+
       digitalWrite(LED, pin_pol);
+
     }
 #endif
   } else { // if (t_na_mod == 1) // Therm Mode
