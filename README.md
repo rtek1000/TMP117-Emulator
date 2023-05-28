@@ -80,7 +80,7 @@ Note: Some functions were not implemented, such as these ones:
 > acknowledges the general-call address and responds to commands in the second byte. If the second byte
 > is 0000 0110, the TMP117 internal registers are reset to power-up values.
 
-Some monitoring and debug outputs can be done in the Serial Monitor of the Arduino IDE. For testing, a UNO board was used as a TMP117 emulator, and a Nano board as a master, SparkFun's library has other useful examples as well.
+Some monitoring and debug outputs can be done in the Serial Monitor of the Arduino IDE. SparkFun's library has other useful examples as well.
 
 --------------
 #### Hardware:
@@ -89,6 +89,7 @@ See this tutorial: [How to Setup I2C Communication on the Arduino](https://www.c
 
 [![img](https://www.circuitbasics.com/wp-content/uploads/2020/04/Arduino-I2C-Tutorial-connection-3-1024x614.png)](https://www.circuitbasics.com/how-to-set-up-i2c-communication-for-arduino/)
 
+For testing, a UNO board was used as a TMP117 emulator, and a Nano board as a master, a 4k7 pull-up resistor on SDA and a 4k7 resistor on SCL.
 --------------
 
 #### About the TMP117:
