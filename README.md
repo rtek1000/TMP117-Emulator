@@ -25,7 +25,7 @@ Available implementations:
 - Use the Arduino board's real EEPROM to save data
 - Emulated temperature value can vary automatically
 - Emulated temperature controlled by analog input (A0/A1/A2/A3)
-- Alarm flags and output pin (LED led on digital pin 13)
+- Alarm flags and output pin (LED led on digital pin 13). Beware of voltage systems below 5V, this pin can force 5V.
 
 The code can be adapted for other boards, but it will probably only recognize one slave address at a time, such as the ESP32 board, when researching I found references that the I2C hardware does not support this functionality.
 
