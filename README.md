@@ -61,7 +61,7 @@ Working example found in the SparkFun library (SparkFun_TMP117.cpp):
 
 Note: Some functions were not implemented, such as these ones:
 
-> 7.5.3.1.5 SMBus Alert Function:
+> 7.5.3.1.5 [SMBus](https://prodigytechno.com/smbus-protocol/) Alert Function:
 > The TMP117 supports the SMBus alert function. When the ALERT pin is connected to an SMBus alert signal
 > and a master senses that an alert condition is present, the master can send out an SMBus ALERT command
 > (0001 1001) to the bus. If the ALERT pin is active, the device acknowledges the SMBus ALERT command
