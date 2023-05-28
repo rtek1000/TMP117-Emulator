@@ -27,12 +27,6 @@ Available implementations:
 - Emulated temperature controlled by analog input (A0/A1/A2/A3)
 - Alarm flags and output pin (LED led on digital pin 13)
 
-> A unique ID is also programmed in
-> the general-purpose EEPROM locations during production. This unique ID is used to support NIST traceability.
-> The TMP117 units are 100% tested on a production setup that is NIST traceable and verified with equipment
-> that is calibrated to ISO/IEC 17025 accredited standards. Only reprogram the general-purpose EEPROM[4:1]
-> locations if NIST traceability is not desired.
-
 The code can be adapted for other boards, but it will probably only recognize one slave address at a time, such as the ESP32 board, when researching I found references that the I2C hardware does not support this functionality.
 
 Communication operation:
@@ -83,6 +77,12 @@ Note: Some functions were not implemented, such as these ones:
 Some monitoring and debug outputs can be done in the Serial Monitor of the Arduino IDE.
 
 SparkFun's library has other useful [examples](https://github.com/sparkfun/SparkFun_TMP117_Arduino_Library/tree/master/examples) as well. The [example](https://github.com/rtek1000/TMP117-Emulator/blob/main/Example7b_AdvancedI2CFunctions_modified.ino) added here has been modified to demonstrate some additional functions of the TMP117, like for example reading UID.
+
+> A unique ID is also programmed in
+> the general-purpose EEPROM locations during production. This unique ID is used to support NIST traceability.
+> The TMP117 units are 100% tested on a production setup that is NIST traceable and verified with equipment
+> that is calibrated to ISO/IEC 17025 accredited standards. Only reprogram the general-purpose EEPROM[4:1]
+> locations if NIST traceability is not desired.
 
 --------------
 #### Hardware:
