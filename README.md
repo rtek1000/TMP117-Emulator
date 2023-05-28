@@ -61,7 +61,7 @@ Working example found in the SparkFun library (SparkFun_TMP117.cpp):
 
 Note: Some functions were not implemented, such as these ones:
 
-> 7.5.3.1.5 SMBus Alert Function
+> 7.5.3.1.5 SMBus Alert Function:
 > The TMP117 supports the SMBus alert function. When the ALERT pin is connected to an SMBus alert signal
 > and a master senses that an alert condition is present, the master can send out an SMBus ALERT command
 > (0001 1001) to the bus. If the ALERT pin is active, the device acknowledges the SMBus ALERT command
@@ -75,7 +75,7 @@ Note: Some functions were not implemented, such as these ones:
 > ALERT pin becomes inactive at the completion of the SMBus ALERT command. If the TMP117 loses the
 > arbitration, the TMP117 ALERT pin remains active.
 
-> 7.5.3.1.6 General-Call Reset Function
+> 7.5.3.1.6 General-Call Reset Function:
 > The TMP117 responds to a two-wire, general-call address (0000 000) if the eighth bit is 0. The device
 > acknowledges the general-call address and responds to commands in the second byte. If the second byte
 > is 0000 0110, the TMP117 internal registers are reset to power-up values.
