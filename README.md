@@ -82,7 +82,7 @@ Note: Some functions were not implemented, such as these ones:
 
 Some monitoring and debug outputs can be done in the Serial Monitor of the Arduino IDE.
 
-SparkFun's library has other useful examples as well. The [example](https://github.com/rtek1000/TMP117-Emulator/blob/main/Example7b_AdvancedI2CFunctions_modified.ino) added here has been modified to demonstrate some additional functions of the TMP117, like for example reading UID.
+SparkFun's [library](https://github.com/sparkfun/SparkFun_TMP117_Arduino_Library/tree/master/examples) has other useful examples as well. The [example](https://github.com/rtek1000/TMP117-Emulator/blob/main/Example7b_AdvancedI2CFunctions_modified.ino) added here has been modified to demonstrate some additional functions of the TMP117, like for example reading UID.
 
 --------------
 #### Hardware:
