@@ -20,6 +20,8 @@ This [code](https://github.com/rtek1000/TMP117-Emulator/blob/main/Arduino_TMP117
 Note: Apparently the MCU STM32 also supports this feature of masking the I2C slave address:
 ![img](https://raw.githubusercontent.com/rtek1000/TMP117-Emulator/main/I2C_Slave_Addr_Mask.png)
 
+The code can be adapted for other boards, but it will probably only recognize one slave address at a time, such as the ESP32 board, when researching I found references that the I2C hardware does not support this functionality.
+
 Available implementations:
 - Four active addresses (0x48/0x49/0x4A/0x4B)
 - I2C bus speed 400kHz
@@ -29,8 +31,6 @@ Available implementations:
 - Emulated temperature value can vary automatically
 - Emulated temperature controlled by analog input (A0/A1/A2/A3)
 - Alarm flags and output pin (LED led on digital pin 13). Beware of voltage systems below 5V, this pin can force 5V.
-
-The code can be adapted for other boards, but it will probably only recognize one slave address at a time, such as the ESP32 board, when researching I found references that the I2C hardware does not support this functionality.
 
 Communication operation:
 - The slave address must be previously selected before the other operations
