@@ -17,6 +17,9 @@ This [code](https://github.com/rtek1000/TMP117-Emulator/blob/main/Arduino_TMP117
 > one then the address match logic ignores the compare between the incoming address bit and the
 > corresponding bit in TWAR.
 
+Note: Apparently the MCU STM32F4 also supports this feature of masking the slave address:
+
+
 Available implementations:
 - Four active addresses (0x48/0x49/0x4A/0x4B)
 - I2C bus speed 400kHz
