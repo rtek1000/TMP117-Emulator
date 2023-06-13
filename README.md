@@ -18,7 +18,7 @@ This [code](https://github.com/rtek1000/TMP117-Emulator/blob/main/Arduino_TMP117
 > corresponding bit in TWAR.
 
 Note: Apparently the MCU STM32F4 also supports this feature of masking the slave address:
-
+![img](https://raw.githubusercontent.com/rtek1000/TMP117-Emulator/main/I2C_Slave_Addr_Mask.png)
 
 Available implementations:
 - Four active addresses (0x48/0x49/0x4A/0x4B)
